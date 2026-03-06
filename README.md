@@ -1,313 +1,336 @@
-<<<<<<< HEAD
-![Logo FIUBA](https://github.com/user-attachments/assets/b68eb44e-b014-4ce6-b3ce-f556aa66fea5)
+![FIUBA Logo](https://github.com/user-attachments/assets/b68eb44e-b014-4ce6-b3ce-f556aa66fea5)
 
-# Memoria del Trabajo Final — Sistemas Embebidos (86.65)
+# Final Work Report — Embedded Systems (86.65)
 
-## Interfaz EMG para Monitoreo de Actividad Muscular
+## EMG Interface for Muscle Activity Monitoring
 
-**Autora:** Luciana B. Falcon  
-**Padrón:** 107316  
-**Año:** 2025 | 2do Cuatrimestre  
-**Materia:** Taller de Sistemas Embebidos (86.65)
+**Author:** Luciana B. Falcon  
+**Student ID:** 107316  
+**Year:** 2025 | 2nd Semester  
+**Course:** Embedded Systems Workshop (86.65)
 
-_Este trabajo fue realizado en la Ciudad Autónoma de Buenos Aires, entre diciembre de 2025 y febrero de 2026._
-
----
-
-## Resumen
-
-En el presente trabajo se desarrolló un sistema embebido capaz de adquirir, procesar y visualizar señales bioeléctricas musculares (EMG) mediante electrodos de registro no invasivos. El sistema utiliza la placa NUCLEO-F103RB con microcontrolador STM32 para digitalizar la señal entregada por el módulo AD8232, calcular el nivel de activación muscular mediante promedio de ventana deslizante y detección de umbrales con histéresis, y transmitir los resultados tanto a un display LCD local como a un módulo ESP32 vía UART. El trabajo demuestra la integración de múltiples periféricos en una arquitectura super-loop bare-metal, con un factor de carga de CPU de aproximadamente 7,29%. La implementación cubre todas las etapas del procesamiento bioeléctrico: sensado analógico, acondicionamiento, digitalización, procesamiento y comunicación.
+_This work was carried out in the Autonomous City of Buenos Aires, between December 2025 and February 2026._
 
 ---
 
-## Índice General
+## Abstract
 
-1. [Introducción general](#capítulo-1-introducción-general)
-   - 1.1 [Descripción del sistema](#11-descripción-del-sistema)
-   - 1.2 [Motivación e importancia](#12-motivación-e-importancia)
-   - 1.3 [Funcionamiento de un electromiograma](#13-funcionamiento-de-un-electromiograma)
-   - 1.4 [Análisis de sistemas similares](#14-análisis-de-sistemas-similares)
-2. [Introducción específica](#capítulo-2-introducción-específica)
-   - 2.1 [Requisitos](#21-requisitos)
-   - 2.2 [Casos de uso](#22-casos-de-uso)
-   - 2.3 [Módulo AD8232](#23-módulo-ad8232)
-   - 2.4 [Módulo ESP32](#24-módulo-esp32)
-   - 2.5 [Display LCD](#25-display-lcd)
-3. [Diseño e implementación](#capítulo-3-diseño-e-implementación)
+This work presents the development of an embedded system capable of acquiring, processing, and displaying muscle bioelectric signals (EMG) using non-invasive surface electrodes. The system uses a NUCLEO-F103RB board with an STM32 microcontroller to digitize the signal provided by the AD8232 module, compute the muscle activation level using a sliding window average and threshold detection with hysteresis, and transmit the results to both a local LCD display and an ESP32 module via UART. The work demonstrates the integration of multiple peripherals in a bare-metal super-loop architecture, with a CPU load factor of approximately 7.29%. The implementation covers all stages of bioelectric processing: analog sensing, conditioning, digitization, processing, and communication.
+
+---
+
+## Table of Contents
+
+1. [General Introduction](#chapter-1-general-introduction)
+   - 1.1 [System Description](#11-system-description)
+   - 1.2 [Motivation and Importance](#12-motivation-and-importance)
+   - 1.3 [How an Electromyogram Works](#13-how-an-electromyogram-works)
+   - 1.4 [Analysis of Similar Systems](#14-analysis-of-similar-systems)
+2. [Specific Introduction](#chapter-2-specific-introduction)
+   - 2.1 [Requirements](#21-requirements)
+   - 2.2 [Use Cases](#22-use-cases)
+   - 2.3 [AD8232 Module](#23-ad8232-module)
+   - 2.4 [ESP32 Module](#24-esp32-module)
+   - 2.5 [LCD Display](#25-lcd-display)
+3. [Design and Implementation](#chapter-3-design-and-implementation)
    - 3.1 [Hardware](#31-hardware)
-     - 3.1.1 [Placa con microcontrolador](#311-placa-con-microcontrolador)
-     - 3.1.2 [Potenciómetro B10K](#312-potenciómetro)
-     - 3.1.3 [Módulo AD8232 y electrodos](#313-módulo-ad8232-y-electrodos)
-     - 3.1.4 [Display LCD 16×2](#314-display-lcd-162)
-     - 3.1.5 [Teclado](#315-teclado)
+     - 3.1.1 [Microcontroller Board](#311-microcontroller-board)
+     - 3.1.2 [Potentiometer B10K](#312-potentiometer)
+     - 3.1.3 [AD8232 Module and Electrodes](#313-ad8232-module-and-electrodes)
+     - 3.1.4 [LCD 16×2 Display](#314-lcd-162-display)
+     - 3.1.5 [Keypad](#315-keypad)
      - 3.1.6 [Buzzer](#316-buzzer)
-     - 3.1.7 [Módulo ESP32](#317-módulo-esp32)
-   - 3.2 [Firmware del microcontrolador](#32-firmware-del-microcontrolador)
-     - 3.2.1 [Tarea Sensor](#321-tarea-sensor)
-     - 3.2.2 [Tarea de adquisición EMG](#322-tarea-de-adquisición-emg)
-     - 3.2.3 [Tarea de procesamiento y detección](#323-tarea-de-procesamiento-y-detección)
-     - 3.2.4 [Tarea de visualización LCD](#324-tarea-de-visualización-lcd)
-     - 3.2.5 [Tarea de transmisión UART](#325-tarea-de-transmisión-uart)
-   - 3.3 [Firmware del módulo ESP32](#33-firmware-del-módulo-esp32)
-4. [Ensayos y resultados](#capítulo-4-ensayos-y-resultados)
-   - 4.1 [Pruebas funcionales del hardware](#41-pruebas-funcionales-del-hardware)
-   - 4.2 [Pruebas funcionales del firmware](#42-pruebas-funcionales-del-firmware)
-   - 4.3 [Pruebas de integración](#43-pruebas-de-integración)
-   - 4.4 [Medición y análisis del consumo energético](#44-medición-y-análisis-del-consumo-energético)
-   - 4.5 [Medición y análisis de tiempos de ejecución](#45-medición-y-análisis-de-tiempos-de-ejecución)
-   - 4.6 [Cumplimiento de requisitos](#46-cumplimiento-de-requisitos)
-   - 4.7 [Comparación con sistemas similares](#47-comparación-con-sistemas-similares)
-   - 4.8 [Documentación del desarrollo realizado](#48-documentación-del-desarrollo-realizado)
-5. [Conclusiones](#capítulo-5-conclusiones)
-   - 5.1 [Resultados obtenidos](#51-resultados-obtenidos)
-   - 5.2 [Próximos pasos](#52-próximos-pasos)
-6. [Bibliografía](#bibliografía)
+     - 3.1.7 [ESP32 Module](#317-esp32-module)
+   - 3.2 [Microcontroller Firmware](#32-microcontroller-firmware)
+     - 3.2.1 [Sensor Task](#321-sensor-task)
+     - 3.2.2 [EMG Acquisition Task](#322-emg-acquisition-task)
+     - 3.2.3 [Processing and Detection Task](#323-processing-and-detection-task)
+     - 3.2.4 [LCD Visualization Task](#324-lcd-visualization-task)
+     - 3.2.5 [UART Transmission Task](#325-uart-transmission-task)
+   - 3.3 [ESP32 Module Firmware](#33-esp32-module-firmware)
+4. [Testing and Results](#chapter-4-testing-and-results)
+   - 4.1 [Hardware Functional Tests](#41-hardware-functional-tests)
+   - 4.2 [Firmware Functional Tests](#42-firmware-functional-tests)
+   - 4.3 [Integration Tests](#43-integration-tests)
+   - 4.4 [Energy Consumption Measurement and Analysis](#44-energy-consumption-measurement-and-analysis)
+   - 4.5 [Execution Time Measurement and Analysis](#45-execution-time-measurement-and-analysis)
+   - 4.6 [Requirements Compliance](#46-requirements-compliance)
+   - 4.7 [Comparison with Similar Systems](#47-comparison-with-similar-systems)
+   - 4.8 [Development Documentation](#48-development-documentation)
+5. [Conclusions](#chapter-5-conclusions)
+   - 5.1 [Results Obtained](#51-results-obtained)
+   - 5.2 [Next Steps](#52-next-steps)
+6. [Bibliography](#bibliography)
 
 ---
 
-## CAPÍTULO 1: Introducción general
+## CHAPTER 1: General Introduction
 
-### 1.1 Descripción del sistema
+### 1.1 System Description
 
-El proyecto consiste en el desarrollo de un sistema embebido capaz de adquirir, procesar y visualizar señales bioeléctricas musculares (EMG) mediante electrodos de registro no invasivos. Las señales EMG son generadas por la actividad eléctrica del músculo durante la contracción y se presentan en el rango de los milivoltios, lo que requiere amplificación y filtrado antes de su digitalización.
+The project consists of the development of an embedded system capable of acquiring, processing, and displaying muscle bioelectric signals (EMG) using non-invasive surface electrodes. EMG signals are generated by the electrical activity of the muscle during contraction and appear in the millivolt range, which requires amplification and filtering before digitization.
 
-El sistema permite la detección de contracciones musculares a través de procesamiento digital en el microcontrolador STM32, basado en una placa NUCLEO-F103RB y programado en lenguaje C, mostrando los resultados en un display LCD local y enviando los datos por UART a un módulo ESP32 para análisis o visualización remota.
+The system enables the detection of muscle contractions through digital processing on the STM32 microcontroller, based on a NUCLEO-F103RB board and programmed in C, displaying results on a local LCD display and sending data via UART to an ESP32 module for remote analysis or visualization.
 
-El objetivo principal es diseñar un sistema embebido completo que integre todas las etapas del procesamiento biológico:
+The main objective is to design a complete embedded system that integrates all stages of biological processing:
 
-- Sensado analógico (electrodos + amplificador AD8232).
-- Acondicionamiento y digitalización (ADC del microcontrolador).
-- Procesamiento y detección de eventos (software embebido).
-- Comunicación y visualización (UART + ESP32 + display LCD).
+- Analog sensing (electrodes + AD8232 amplifier).
+- Conditioning and digitization (STM32 ADC).
+- Processing and event detection (embedded software).
+- Communication and visualization (UART + ESP32 + LCD display).
 
-### 1.2 Motivación e importancia
+### 1.2 Motivation and Importance
 
-El monitoreo de señales EMG tiene aplicaciones directas en rehabilitación física, interfaces hombre-máquina, detección de fatiga muscular y sistemas de asistencia para personas con discapacidades motoras. La mayoría de los sistemas comerciales disponibles son costosos, de gran tamaño o requieren equipamiento médico especializado. Este trabajo propone una alternativa compacta, de bajo costo y basada en hardware abierto, que puede ser utilizada tanto en contextos de investigación como en aplicaciones educativas o de uso personal.
+EMG signal monitoring has direct applications in physical rehabilitation, human-machine interfaces, muscle fatigue detection, and assistive systems for people with motor disabilities. Most commercially available systems are expensive, large, or require specialized medical equipment. This work proposes a compact, low-cost alternative based on open hardware, which can be used in research contexts as well as educational or personal applications.
 
-El presente trabajo se destaca especialmente por integrar en un único sistema embebido bare-metal todas las etapas del procesamiento EMG, desde la adquisición analógica hasta la transmisión inalámbrica, con un factor de carga de CPU reducido (7,29%) que deja margen para futuras expansiones.
+This work is particularly notable for integrating all stages of EMG processing into a single bare-metal embedded system — from analog acquisition to wireless transmission — with a reduced CPU load factor (7.29%) that leaves room for future expansions.
 
-### 1.3 Funcionamiento de un electromiograma
+### 1.3 How an Electromyogram Works
 
-Una señal electromiográfica (EMG) es el registro de la actividad eléctrica generada por las fibras musculares durante su contracción. Cuando el sistema nervioso central envía una señal a un músculo, las motoneuronas activan grupos de fibras musculares denominados unidades motoras. Cada unidad motora genera un potencial de acción característico que, sumado al de las demás unidades activas, produce la señal EMG observable en la superficie de la piel.
+An electromyographic (EMG) signal is a recording of the electrical activity generated by muscle fibers during contraction. When the central nervous system sends a signal to a muscle, motor neurons activate groups of muscle fibers called motor units. Each motor unit generates a characteristic action potential which, combined with those of other active units, produces the EMG signal observable on the skin surface.
 
-Las principales características de la señal EMG superficial son las siguientes:
+The main characteristics of the surface EMG signal are:
 
-- **Amplitud:** entre 0,1 mV y 5 mV en condiciones normales de registro superficial.
-- **Rango frecuencial:** entre 20 Hz y 500 Hz, con mayor contenido energético en la banda de 50–150 Hz.
-- **Naturaleza:** estocástica, no estacionaria y fuertemente dependiente del nivel de esfuerzo muscular.
+- **Amplitude:** between 0.1 mV and 5 mV under normal surface recording conditions.
+- **Frequency range:** between 20 Hz and 500 Hz, with higher energy content in the 50–150 Hz band.
+- **Nature:** stochastic, non-stationary, and strongly dependent on the level of muscular effort.
 
-Para su adquisición se utilizan electrodos de superficie colocados sobre la piel en la zona de interés. La diferencia de potencial registrada entre dos electrodos activos, con referencia a un tercer electrodo neutro, es amplificada mediante un amplificador de instrumentación de alta impedancia de entrada y alto rechazo en modo común (CMRR), con el fin de atenuar el ruido de red (50/60 Hz) y otros artefactos.
+For acquisition, surface electrodes are placed on the skin over the area of interest. The potential difference recorded between two active electrodes, with reference to a third neutral electrode, is amplified using a high-input-impedance, high-common-mode-rejection (CMRR) instrumentation amplifier to attenuate power line noise (50/60 Hz) and other artifacts.
 
-El procesamiento típico de la señal EMG incluye las siguientes etapas:
+Typical EMG signal processing includes the following stages:
 
-1. Amplificación y filtrado analógico (pasa-banda 20–450 Hz), realizado en este trabajo por el módulo AD8232.
-2. Digitalización mediante ADC a frecuencia de muestreo ≥ 1 kHz, a cargo del ADC1 del STM32.
-3. Cálculo del valor promedio en ventanas de 8 muestras como indicador del nivel de activación muscular (véase Sección 3.2).
-4. Detección de eventos de contracción mediante comparación con umbrales de histéresis calibrados por el usuario (véase Sección 3.2).
+1. Amplification and analog filtering (20–450 Hz bandpass), performed in this work by the AD8232 module.
+2. Digitization via ADC at a sampling frequency ≥ 1 kHz, handled by the STM32's ADC1.
+3. Computation of the average value in 8-sample windows as an indicator of muscle activation level (see Section 3.2).
+4. Detection of contraction events by comparison with user-calibrated hysteresis thresholds (see Section 3.2).
 
-En la Figura 3.1 se puede observar el diagrama en bloques del sistema desarrollado en este trabajo, que implementa todas las etapas mencionadas.
+Figure 3.1 shows the block diagram of the system developed in this work, which implements all the stages mentioned above.
 
-### 1.4 Análisis de sistemas similares
+### 1.4 Analysis of Similar Systems
 
-> _(Esta sección debe completarse con una tabla comparativa de sistemas EMG disponibles en el mercado o en la literatura.)_
+Table 1.1 presents a comparison between the system developed in this work and two representative solutions available on the market: the [MyoWare 2.0](https://myoware.com/products/muscle-sensor/) combined with Arduino, aimed at low-cost educational and prototyping projects, and the [OpenBCI Cyton](https://openbci.com/), a high-end research platform with multi-channel support and wireless connectivity. The proposed system is positioned as a low-cost alternative that incorporates features absent in both commercial solutions, such as local visualization, guided calibration, and threshold alert.
 
-| Sistema               |   Microcontrolador    | Conectividad |   Display   | Costo aprox. |
-| --------------------- | :-------------------: | :----------: | :---------: | :----------: |
-| MyoWare 2.0 + Arduino |      ATmega328P       |    Serial    | No incluido |   ~50 USD    |
-| OpenBCI Cyton         |         PIC32         | Wi-Fi / BLE  | No incluido |  ~1249 USD   |
-| **Este trabajo**      | STM32 (NUCLEO-F103RB) | UART + ESP32 |  LCD 16×2   |   ~40 USD    |
+<div align="center">
 
-_Tabla 1.1: Comparación preliminar con sistemas similares._
+| System                |   Microcontroller    | Connectivity |   Display    | Approx. Cost |
+| --------------------- | :------------------: | :----------: | :----------: | :----------: |
+| MyoWare 2.0 + Arduino |      ATmega328P      |    Serial    | Not included |   ~$50 USD   |
+| OpenBCI Cyton         |        PIC32         | Wi-Fi / BLE  | Not included |  ~$1249 USD  |
+| **This work**         | STM32 (NUCLEO-F103RB) | UART + ESP32 |   LCD 16×2   |   ~$40 USD   |
 
-La principal ventaja del sistema desarrollado respecto a las alternativas comerciales es su bajo costo, la integración de visualización local, la rutina de calibración guiada y el procesamiento embebido completo sin dependencia de software externo para la detección de contracciones.
+_Table 1.1: Preliminary comparison with similar systems._
+
+</div>
+
+The main advantage of the developed system over commercial alternatives is its low cost, integrated local visualization, guided calibration routine, and complete embedded processing without dependency on external software for contraction detection.
 
 ---
 
-## CAPÍTULO 2: Introducción específica
+## CHAPTER 2: Specific Introduction
 
-### 2.1 Requisitos
+### 2.1 Requirements
 
-#### Plataforma de desarrollo
+#### Development Platform
 
-- **Placa utilizada:** NUCLEO-F103RB
-- **Microcontrolador:** STM32F103RB (ARM Cortex-M3, 64 MHz)
-- **Arquitectura de firmware:** Super Loop (bare-metal, event-triggered)
+- **Board used:** NUCLEO-F103RB
+- **Microcontroller:** STM32F103RB (ARM Cortex-M3, 64 MHz)
+- **Firmware architecture:** Super Loop (bare-metal, event-triggered)
 
-#### Requisitos funcionales
+#### Functional Requirements
 
-La Tabla 2.1 resume las funciones esenciales que el sistema debe llevar a cabo para cumplir con los objetivos del proyecto. Cada requisito se codifica con un identificador único para permitir su trazabilidad en el diseño y la implementación.
+Table 2.1 summarizes the essential functions the system must perform to meet the project objectives. Each requirement is encoded with a unique identifier to enable traceability in design and implementation.
 
-| Código | Requisito Funcional                                                                                     |
-| :----: | ------------------------------------------------------------------------------------------------------- |
-|  RF1   | El sistema debe adquirir la señal EMG mediante electrodos conectados al módulo AD8232.                  |
-|  RF2   | El sistema debe digitalizar la señal con el ADC del STM32 a al menos 1 kHz.                             |
-|  RF3   | El sistema debe procesar la señal (promedio de ventana, umbral con histéresis).                         |
-|  RF4   | El sistema debe mostrar el nivel de actividad muscular en el display LCD.                               |
-|  RF5   | El sistema debe transmitir los datos procesados por UART hacia el módulo ESP32.                         |
-|  RF6   | El sistema debe activar un buzzer cuando la actividad muscular supere un umbral configurable.           |
-|  RF7   | El sistema debe permitir iniciar/detener el monitoreo mediante un botón.                                |
-|  RF8   | El sistema debe implementar una rutina de calibración guiada para determinar los umbrales de detección. |
+<div align="center">
 
-_Tabla 2.1: Requisitos funcionales RF._
+| Code | Functional Requirement                                                                               |
+| :--: | ---------------------------------------------------------------------------------------------------- |
+|  FR1  | The system must acquire the EMG signal via electrodes connected to the AD8232 module.               |
+|  FR2  | The system must digitize the signal with the STM32 ADC at at least 1 kHz.                           |
+|  FR3  | The system must process the signal (window average, threshold with hysteresis).                     |
+|  FR4  | The system must display the muscle activity level on the LCD display.                               |
+|  FR5  | The system must transmit processed data via UART to the ESP32 module.                               |
+|  FR6  | The system must activate a buzzer when muscle activity exceeds a configurable threshold.            |
+|  FR7  | The system must allow starting/stopping monitoring via a button.                                    |
+|  FR8  | The system must implement a guided calibration routine to determine detection thresholds.           |
 
-#### Requisitos no funcionales
+_Table 2.1: Functional requirements._
 
-La Tabla 2.2 presenta las restricciones de desempeño y las condiciones operativas que debe cumplir el sistema.
+</div>
 
-| Código | Requisito No Funcional                                                      |
-| :----: | --------------------------------------------------------------------------- |
-|  RNF1  | El sistema debe mantener un consumo menor a 20 mA en operación estándar.    |
-|  RNF2  | La comunicación UART hacia el ESP32 debe ser continua durante el monitoreo. |
-|  RNF3  | El display debe actualizarse al menos cada 100 ms.                          |
-|  RNF4  | La detección de contracción debe ocurrir con una latencia menor a 50 ms.    |
-|  RNF5  | El firmware debe estar implementado en arquitectura super-loop.             |
+#### Non-Functional Requirements
 
-_Tabla 2.2: Requisitos no funcionales RNF._
+Table 2.2 presents the performance constraints and operating conditions the system must meet.
 
-### 2.2 Casos de uso
+<div align="center">
 
-En las tablas a continuación se presentan los 2 casos de uso definidos para el sistema.
+| Code  | Non-Functional Requirement                                                    |
+| :---: | ----------------------------------------------------------------------------- |
+| NFR1  | The system must maintain a consumption below 20 mA in standard operation.     |
+| NFR2  | UART communication to the ESP32 must be continuous during monitoring.         |
+| NFR3  | The display must be updated at least every 100 ms.                            |
+| NFR4  | Contraction detection must occur with a latency of less than 50 ms.           |
+| NFR5  | The firmware must be implemented in super-loop architecture.                  |
 
-#### Caso de uso 1: Monitoreo de actividad muscular
+_Table 2.2: Non-functional requirements._
 
-| Ítem               | Descripción                                               |
+</div>
+
+### 2.2 Use Cases
+
+#### Use Case 1: Muscle Activity Monitoring
+
+<div align="center">
+
+| Item               | Description                                               |
 | ------------------ | --------------------------------------------------------- |
-| **Actores**        | Usuario, Sistema EMG.                                     |
-| **Precondiciones** | El dispositivo está encendido y los electrodos colocados. |
+| **Actors**         | User, EMG System.                                         |
+| **Preconditions**  | The device is powered on and the electrodes are in place. |
 
-_Tabla 2.3: Caso de uso 1._
+_Table 2.3: Use case 1._
 
-| Paso | Acción                                                                                    |
-| :--: | ----------------------------------------------------------------------------------------- |
-|  1   | El usuario presiona el botón ENTER para iniciar el monitoreo.                             |
-|  2   | El sistema comienza a muestrear la señal EMG en ambos canales.                            |
-|  3   | Se procesa la señal y se calcula el nivel de activación muscular por promedio de ventana. |
-|  4   | El valor procesado se muestra en el display LCD y se envía por UART al ESP32.             |
-|  5   | Si el nivel supera el umbral calibrado, se activa el buzzer.                              |
+| Step | Action                                                                                        |
+| :--: | --------------------------------------------------------------------------------------------- |
+|  1   | The user presses the ENTER button to start monitoring.                                        |
+|  2   | The system begins sampling the EMG signal on both channels.                                   |
+|  3   | The signal is processed and the muscle activation level is calculated using window averaging.  |
+|  4   | The processed value is shown on the LCD display and sent via UART to the ESP32.               |
+|  5   | If the level exceeds the calibrated threshold, the buzzer is activated.                       |
 
-_Tabla 2.4: Flujo principal._
+_Table 2.4: Main flow._
 
-| Paso | Acción                                                                                         |
-| :--: | ---------------------------------------------------------------------------------------------- |
-|  A1  | El usuario presiona el botón STOP y el sistema detiene la adquisición y vuelve al estado IDLE. |
+| Step | Action                                                                                        |
+| :--: | --------------------------------------------------------------------------------------------- |
+|  A1  | The user presses the STOP button and the system halts acquisition and returns to IDLE state.  |
 
-_Tabla 2.5: Flujo alternativo._
+_Table 2.5: Alternative flow._
 
-#### Caso de uso 2: Calibración de umbrales
+</div>
 
-| Ítem                    | Descripción                                                                                                                                                                                   |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Actor**               | Usuario, Sistema EMG.                                                                                                                                                                         |
-| **Precondiciones**      | El dispositivo está encendido y los electrodos colocados correctamente.                                                                                                                       |
-| **Postcondiciones**     | Los umbrales `calib_threshold_high` y `calib_threshold_low` quedan configurados para la sesión.                                                                                               |
-| **Descripción general** | El sistema guía al usuario a través de una secuencia de reposo y contracción para medir los niveles extremos de la señal y calcular automáticamente los umbrales de detección con histéresis. |
+#### Use Case 2: Threshold Calibration
 
-_Tabla 2.6: Caso de uso 2._
+<div align="center">
 
-| Paso | Acción                                                                                                           |
-| :--: | ---------------------------------------------------------------------------------------------------------------- |
-|  1   | El usuario presiona el botón CALIB. El buzzer suena brevemente como señal de inicio.                             |
-|  2   | El sistema solicita al usuario relajar el músculo durante 10 segundos y promedia las muestras ADC.               |
-|  3   | El buzzer suena nuevamente. El sistema solicita contraer el músculo durante 10 segundos y promedia las muestras. |
-|  4   | El sistema calcula los umbrales al 75% y 25% del rango medido y confirma con un pitido final.                    |
+| Item                    | Description                                                                                                                                                                 |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Actor**               | User, EMG System.                                                                                                                                                           |
+| **Preconditions**       | The device is powered on and the electrodes are correctly placed.                                                                                                           |
+| **Postconditions**      | The thresholds `calib_threshold_high` and `calib_threshold_low` are configured for the session.                                                                             |
+| **General Description** | The system guides the user through a sequence of rest and contraction to measure the extreme signal levels and automatically calculate detection thresholds with hysteresis. |
 
-_Tabla 2.7: Flujo de calibración._
+_Table 2.6: Use case 2._
 
-### 2.3 Módulo AD8232
+| Step | Action                                                                                                               |
+| :--: | -------------------------------------------------------------------------------------------------------------------- |
+|  1   | The user presses the CALIB button. The buzzer sounds briefly as a start signal.                                      |
+|  2   | The system prompts the user to relax the muscle for 10 seconds and averages the ADC samples.                         |
+|  3   | The buzzer sounds again. The system prompts the user to contract the muscle for 10 seconds and averages the samples.  |
+|  4   | The system calculates thresholds at 75% and 25% of the measured range and confirms with a final beep.               |
 
-El módulo AD8232 es un circuito integrado de adquisición de señales biopotenciales diseñado por Analog Devices. Incorpora un amplificador de instrumentación, filtros pasa-banda y una etapa de amplificación de ganancia configurable, lo que lo hace adecuado para capturar señales EMG en el rango de 0,5 mV a 3,5 mV. La salida es una tensión analógica en el rango de 0 V a 3,3 V, directamente compatible con el ADC del STM32. Su elección se basó en su bajo costo (~3 USD), fácil integración con microcontroladores de 3,3 V y disponibilidad en el mercado local.
+_Table 2.7: Calibration flow._
 
-### 2.4 Módulo ESP32
+</div>
 
-Para la transmisión de datos hacia un dispositivo externo se utilizó un módulo ESP32, que recibe los datos de activación muscular desde el STM32 vía UART (USART3, pines PC10/PC11 con remap parcial) y puede reenviarlos por Wi-Fi o Bluetooth hacia una PC o dispositivo móvil. La comunicación se estableció a 4800 bps. Su elección se basó en su bajo costo, capacidad de comunicación inalámbrica integrada y facilidad de programación.
+### 2.3 AD8232 Module
 
-### 2.5 Display LCD
+The [AD8232](https://www.analog.com/en/products/ad8232.html) module is a biopotential signal acquisition integrated circuit designed by Analog Devices. It incorporates an instrumentation amplifier, bandpass filters, and a configurable gain amplification stage, making it suitable for capturing EMG signals in the range of 0.5 mV to 3.5 mV. The output is an analog voltage in the range of 0 V to 3.3 V, directly compatible with the STM32 ADC. It was chosen for its low cost (~$3 USD), easy integration with 3.3 V microcontrollers, and availability in the local market.
 
-El display LCD de 16×2 caracteres se conecta en modo de 4 bits a los pines GPIO de la placa. La función `LCD_show()` implementada en el firmware permite actualizar las dos filas del display en una sola llamada, borrando el contenido anterior y escribiendo las nuevas cadenas. El display se actualiza cada 1000 ticks del super-loop para mostrar en tiempo real el nivel de activación y el estado de contracción de cada canal.
+### 2.4 ESP32 Module
+
+For data transmission to an external device, an [ESP32](https://cdn.sparkfun.com/datasheets/IoT/esp32_datasheet_en.pdf) module was used, which receives muscle activation data from the STM32 via UART (USART3, pins PC10/PC11 with partial AFIO remap) and can forward it over Wi-Fi or Bluetooth to a PC or mobile device. Communication was established at 4800 bps. It was chosen for its low cost, integrated wireless communication capability, and ease of programming.
+
+### 2.5 LCD Display
+
+The 16×2 character LCD display is connected in 4-bit mode to the board's GPIO pins. The `LCD_show()` function implemented in the firmware allows updating both rows of the display in a single call, clearing the previous content and writing new strings. The display is updated every 1000 super-loop ticks to show the activation level and contraction state of each channel in real time.
 
 ---
 
-## CAPÍTULO 3: Diseño e implementación
+## CHAPTER 3: Design and Implementation
 
 ### 3.1 Hardware
 
-A continuación se presenta el diagrama en bloques general del sistema:
+Figure 3.1 shows the general block diagram of the system. The core of the system is the NUCLEO-F103RB board with the STM32F103RB microcontroller, which centralizes data acquisition, processing, and communication. Two AD8232 modules capture the muscle signal (potential difference) from each channel and deliver it to the STM32 ADC. The processed results are transmitted in real time to the 16×2 LCD display and to the ESP32 module for wireless retransmission to a PC. Three buttons from the keypad control the application flow, and the buzzer emits audible alerts upon detected contractions and during calibration.
 
-![Diagrama en bloques del sistema EMG](https://github.com/user-attachments/assets/35658773-ff54-48d2-b060-35d2d7419d01)
+![Block diagram of the EMG system](https://github.com/user-attachments/assets/35658773-ff54-48d2-b060-35d2d7419d01)
 
-_Figura 3.1: Diagrama en bloques del sistema de interfaz EMG._
+_Figure 3.1: Block diagram of the EMG interface system._
 
-| Componente         | Descripción                               |     Conexión al STM32      |
-| ------------------ | ----------------------------------------- | :------------------------: |
-| NUCLEO-F103RB      | Placa de desarrollo con STM32F103RB       |             —              |
-| Módulo AD8232 (×2) | Amplificador de señal EMG                 | ADC1 CH0 (PA0) / CH1 (PA1) |
-| Display LCD 16×2   | Visualización local (modo 4 bits)         |        GPIO (PA/PB)        |
-| Módulo ESP32       | Comunicación inalámbrica                  |     USART3 (PC10/PC11)     |
-| Buzzer             | Alerta sonora                             |   GPIO (BUZZER_PORT/PIN)   |
-| Botón ENTER        | Inicio del monitoreo                      |      GPIO con pull-up      |
-| Botón CALIB        | Inicio de calibración                     |      GPIO con pull-up      |
-| Botón STOP         | Detención del monitoreo                   |      GPIO con pull-up      |
-| Electrodos (×6)    | Captación de señal muscular (3 por canal) |       Entrada AD8232       |
+<div align="center">
 
-_Tabla 3.1: Lista de materiales del sistema._
+| Component          | Description                               |     Connection to STM32      |
+| ------------------ | ----------------------------------------- | :--------------------------: |
+| NUCLEO-F103RB      | Development board with STM32F103RB        |              —               |
+| AD8232 Module (×2) | EMG signal amplifier                      | ADC1 CH0 (PA0) / CH1 (PA1)  |
+| LCD 16×2 Display   | Local visualization (4-bit mode)          |         GPIO (PA/PB)         |
+| ESP32 Module       | Wireless communication                    |      USART3 (PC10/PC11)      |
+| Buzzer             | Audio alert                               |    GPIO (BUZZER_PORT/PIN)    |
+| ENTER Button       | Start monitoring                          |       GPIO with pull-up      |
+| CALIB Button       | Start calibration                         |       GPIO with pull-up      |
+| STOP Button        | Stop monitoring                           |       GPIO with pull-up      |
+| Electrodes (×6)    | Muscle signal capture (3 per channel)     |         AD8232 input         |
 
-#### 3.1.1 Placa con microcontrolador
+_Table 3.1: System bill of materials._
 
-La placa NUCLEO-F103RB constituye el núcleo del sistema. Cuenta con un microcontrolador STM32F103RB (ARM Cortex-M3 a 64 MHz), configurado mediante PLL interno (HSI/2 × 16). Se utilizó esta placa por ser la plataforma adoptada por la cátedra y por contar con todas las características necesarias: ADC de 12 bits, múltiples UARTs y GPIOs suficientes para conectar todos los periféricos del sistema.
+</div>
+
+#### 3.1.1 Microcontroller Board
+
+The NUCLEO-F103RB board is the core of the system. It features an STM32F103RB microcontroller (ARM Cortex-M3 at 64 MHz), configured using an internal PLL (HSI/2 × 16). This board was chosen because it is the platform adopted by the course and has all necessary features: 12-bit ADC, multiple UARTs, and sufficient GPIOs to connect all system peripherals. Figure 3.2 shows the board used.
 
 <div align="center">
 <img width="356" alt="nucleo-f103rb" src="https://github.com/user-attachments/assets/23d35aa9-fa1f-4f03-b840-d2dc451ce950" />
 </div>
 
-#### 3.1.2 Potenciómetro
+_Figure 3.2: NUCLEO-F103RB board used as the development platform._
 
-Se incorporó un potenciómetro lineal B10K (10 kΩ) como elemento de ajuste manual del nivel de umbral de detección. Su cursor central se conecta a un pin ADC del STM32, permitiendo leer un valor analógico entre 0 y 3,3 V que puede utilizarse para ajustar en tiempo real la sensibilidad del sistema sin necesidad de recompilar el firmware.
+#### 3.1.2 Potentiometer
+
+A linear B10K (10 kΩ) potentiometer was included as a manual adjustment element for the detection threshold level. Its center wiper is connected to an STM32 ADC pin, allowing an analog value between 0 and 3.3 V to be read, which can be used to adjust the system sensitivity in real time without recompiling the firmware.
 
 <div align="center">
-<img width="206" alt="potenciometro" src="https://github.com/user-attachments/assets/30e422e6-6052-4f0f-8787-0ead087d1797" />
+<img width="206" alt="potentiometer" src="https://github.com/user-attachments/assets/30e422e6-6052-4f0f-8787-0ead087d1797" />
 </div>
 
-#### 3.1.3 Módulo AD8232 y electrodos
+#### 3.1.3 AD8232 Module and Electrodes
 
-El módulo AD8232 se encarga de la amplificación y el filtrado analógico de la señal muscular antes de su digitalización. Se utilizaron dos módulos en paralelo para monitorear dos canales musculares de forma simultánea. Cada módulo requiere tres electrodos: dos activos colocados sobre el músculo de interés y uno de referencia en una zona neutra. La salida analógica de cada módulo se conecta a un canal del ADC1 del STM32 (PA0 para el canal 1 y PA1 para el canal 2).
+The AD8232 module handles the amplification and analog filtering of the muscle signal before digitization. Two modules were used in parallel to monitor two muscle channels simultaneously. Each module requires three electrodes: two active electrodes placed over the muscle of interest and one reference electrode on a neutral area. The analog output of each module is connected to a channel of the STM32's ADC1 (PA0 for channel 1 and PA1 for channel 2).
 
 <div align="center">
 <img width="356" alt="emg" src="https://github.com/user-attachments/assets/2fb95de3-25e7-4da0-a830-56a8479ff90a" />
 </div>
 
-#### 3.1.4 Display LCD 16×2
+#### 3.1.4 LCD 16×2 Display
 
-El display LCD de 16×2 caracteres se conecta al STM32 en modo de 4 bits, utilizando pines GPIO de los puertos A y B. La función `LCD_show()` implementada en el firmware permite actualizar ambas filas en una sola llamada. En la fila superior se muestra el nivel de activación y el estado del canal 1, y en la fila inferior los del canal 2.
+The 16×2 character LCD display is connected to the STM32 in 4-bit mode, using GPIO pins from ports A and B. The `LCD_show()` function implemented in the firmware allows updating both rows in a single call. The top row shows the activation level and state of channel 1, and the bottom row shows those of channel 2.
 
 <div align="center">
 <img width="256" height="256" alt="display" src="https://github.com/user-attachments/assets/53930791-bdd4-4d29-99fc-ef5b61b6ab52" />
 </div>
 
-#### 3.1.5 Teclado
+#### 3.1.5 Keypad
 
-El sistema cuenta con tres pulsadores con resistencia pull-up que permiten controlar el flujo de la aplicación:
+The system has three push buttons with pull-up resistors that control the application flow:
 
-- **ENTER:** inicia la sesión de monitoreo EMG.
-- **CALIB:** inicia la rutina de calibración guiada.
-- **STOP:** detiene el monitoreo activo.
+- **ENTER:** starts the EMG monitoring session.
+- **CALIB:** starts the guided calibration routine.
+- **STOP:** stops active monitoring.
 
-El procesamiento de los eventos generados por estos botones, incluyendo el debouncing por máquina de estados, se describe en la Sección 3.2.1.
+The processing of events generated by these buttons, including state machine debouncing, is described in Section 3.2.1.
 
 <div align="center">
-<img width="256" height="256" alt="botonera" src="https://github.com/user-attachments/assets/7e20406e-420f-4588-a819-0c369c607f2e" />
+<img width="256" height="256" alt="keypad" src="https://github.com/user-attachments/assets/7e20406e-420f-4588-a819-0c369c607f2e" />
 </div>
 
 #### 3.1.6 Buzzer
 
-El buzzer es un actuador pasivo controlado mediante un pin GPIO del STM32. Se activa cuando el nivel promedio de activación muscular supera el umbral alto calibrado, y se desactiva cuando cae por debajo del umbral bajo. También se utiliza durante la rutina de calibración como señal sonora de aviso al usuario para indicar el inicio de cada etapa.
+The buzzer is a passive actuator controlled via a GPIO pin on the STM32. It activates when the average muscle activation level exceeds the calibrated high threshold, and deactivates when it falls below the low threshold. It is also used during the calibration routine as an audible warning to indicate the start of each stage.
 
 <div align="center">
 <img width="156" alt="buzzer" src="https://github.com/user-attachments/assets/f2423315-f458-4dc9-ad44-eb2fc1c55bc5" />
 </div>
 
-#### 3.1.7 Módulo ESP32
+#### 3.1.7 ESP32 Module
 
-El módulo ESP32 recibe los datos de activación muscular desde el STM32 vía USART3 (pines PC10/PC11 con remap parcial de AFIO) a 4800 bps. Los datos se envían en formato CSV (`emg1,emg2,ESTADO1,ESTADO2\n`) y el ESP32 puede reenviarlos por Wi-Fi o Bluetooth hacia una PC o dispositivo móvil para visualización remota.
+The ESP32 module receives muscle activation data from the STM32 via USART3 (pins PC10/PC11 with partial AFIO remap) at 4800 bps. Data is sent in CSV format (`emg1,emg2,STATE1,STATE2\n`) and the ESP32 can forward it over Wi-Fi or Bluetooth to a PC or mobile device for remote visualization.
 
 <div align="center">
 <img width="256" alt="esp-32" src="https://github.com/user-attachments/assets/8a090d19-92fe-4f0d-aef6-431b89b1a659" />
@@ -315,50 +338,76 @@ El módulo ESP32 recibe los datos de activación muscular desde el STM32 vía US
 
 ---
 
-### 3.2 Firmware del microcontrolador
+### 3.2 Microcontroller Firmware
 
-El firmware fue desarrollado en lenguaje C, implementando una arquitectura **super-loop (bare-metal)** con una máquina de estados principal gestionada por la tarea `task_menu`. No se utilizó sistema operativo de tiempo real (RTOS).
+The firmware was developed in C, implementing a **super-loop (bare-metal)** architecture with a main state machine managed by the `task_menu` task. No real-time operating system (RTOS) was used.
 
-La Tabla 3.2 resume las tareas que componen el super-loop:
+Table 3.2 summarizes the tasks that make up the super-loop:
 
-| Tarea                 | Descripción                                       |  Período   |
-| --------------------- | ------------------------------------------------- | :--------: |
-| Tarea Sensor          | Lectura de botones con debouncing por MEF         |  Por tick  |
-| Tarea Adquisición EMG | Muestreo continuo de dos canales (PA0 y PA1)      |  Continuo  |
-| Tarea Procesamiento   | Promedio de ventana, detección de umbral y buzzer |  Por tick  |
-| Tarea LCD             | Refresco del display con nivel y estado           | 1000 ticks |
-| Tarea UART            | Envío de datos al ESP32 en formato CSV            | 1000 ticks |
+<div align="center">
 
-_Tabla 3.2: Tareas del super-loop._
+| Task                  | Description                                       |   Period    |
+| --------------------- | ------------------------------------------------- | :---------: |
+| Sensor Task           | Button reading with state machine debouncing      |  Per tick   |
+| EMG Acquisition Task  | Continuous sampling of two channels (PA0 and PA1) |  Continuous |
+| Processing Task       | Window average, threshold detection, and buzzer   |  Per tick   |
+| LCD Task              | Display refresh with level and state              | 1000 ticks  |
+| UART Task             | Data transmission to ESP32 in CSV format          | 1000 ticks  |
 
-La máquina de estados principal (`task_menu`) cuenta con los siguientes estados:
+_Table 3.2: Super-loop tasks._
 
-| Estado              | Descripción                                             |
+</div>
+
+The main state machine (`task_menu`) has the following states:
+
+<div align="center">
+
+| State               | Description                                             |
 | ------------------- | ------------------------------------------------------- |
-| `ST_IDLE`           | Sistema en espera. Aguarda evento ENTER o CALIB.        |
-| `ST_ACQUIRING`      | Adquisición y procesamiento activo de la señal EMG.     |
-| `ST_CALIB_BUZZ1`    | Primer pitido de aviso al inicio de la calibración.     |
-| `ST_CALIB_REST`     | Medición del nivel de reposo durante 10 segundos.       |
-| `ST_CALIB_BUZZ2`    | Segundo pitido de aviso antes de la contracción.        |
-| `ST_CALIB_CONTRACT` | Medición del nivel de contracción durante 10 segundos.  |
-| `ST_CALIB_BUZZ3`    | Pitido final de confirmación de calibración completada. |
+| `ST_IDLE`           | System waiting. Awaits ENTER or CALIB event.            |
+| `ST_ACQUIRING`      | Active acquisition and processing of EMG signal.        |
+| `ST_CALIB_BUZZ1`    | First warning beep at the start of calibration.         |
+| `ST_CALIB_REST`     | Rest level measurement for 10 seconds.                  |
+| `ST_CALIB_BUZZ2`    | Second warning beep before contraction.                 |
+| `ST_CALIB_CONTRACT` | Contraction level measurement for 10 seconds.           |
+| `ST_CALIB_BUZZ3`    | Final confirmation beep after calibration is complete.  |
 
-_Tabla 3.3: Estados de la máquina de estados principal._
+_Table 3.3: Main state machine states._
 
-#### 3.2.1 Tarea Sensor
+</div>
 
-La tarea `task_sensor` gestiona la lectura de los tres botones (ENTER, CALIB, STOP) implementando una máquina de estados de 4 estados por botón para realizar el debouncing:
+#### 3.2.1 Sensor Task
 
-| Estado              | Descripción                                                                           |
+The `task_sensor` task manages reading the three buttons (ENTER, CALIB, STOP), implementing a 4-state machine per button for debouncing:
+
+```mermaid
+stateDiagram-v2
+    [*] --> ST_BTN_XX_UP
+
+    ST_BTN_XX_UP --> ST_BTN_XX_FALLING : falling edge
+    ST_BTN_XX_FALLING --> ST_BTN_XX_UP : noise (bounce)
+    ST_BTN_XX_FALLING --> ST_BTN_XX_DOWN : tick_max reached
+    ST_BTN_XX_DOWN --> ST_BTN_XX_RISING : rising edge
+    ST_BTN_XX_RISING --> ST_BTN_XX_DOWN : noise (bounce)
+    ST_BTN_XX_RISING --> ST_BTN_XX_UP : tick_max reached
+```
+
+_Figure 3.2.1: Possible states of the button state machines._
+
+<div align="center">
+
+| State               | Description                                                                           |
 | ------------------- | ------------------------------------------------------------------------------------- |
-| `ST_BTN_XX_UP`      | Botón liberado. Espera flanco descendente.                                            |
-| `ST_BTN_XX_FALLING` | Flanco detectado. Cuenta `tick_max` ticks antes de confirmar la pulsación.            |
-| `ST_BTN_XX_DOWN`    | Botón confirmado como presionado. Espera flanco ascendente.                           |
-| `ST_BTN_XX_RISING`  | Flanco de subida detectado. Cuenta `tick_max` ticks antes de confirmar la liberación. |
+| `ST_BTN_XX_UP`      | Button released. Awaits falling edge.                                                 |
+| `ST_BTN_XX_FALLING` | Edge detected. Counts `tick_max` ticks before confirming the press.                   |
+| `ST_BTN_XX_DOWN`    | Button confirmed as pressed. Awaits rising edge.                                      |
+| `ST_BTN_XX_RISING`  | Rising edge detected. Counts `tick_max` ticks before confirming release.              |
 
-_Tabla 3.4: Estados de la MEF de debouncing de botones._
+_Table 3.4: Button debouncing state machine states._
 
-El tiempo de filtrado se configura con `DEL_BTN_XX_MAX = 50` ticks. Solo cuando el botón permanece en el mismo nivel lógico durante ese tiempo se genera el evento correspondiente hacia la tarea `task_menu`, evitando rebotes mecánicos:
+</div>
+
+The filter time is configured with `DEL_BTN_XX_MAX = 50` ticks. Only when the button remains at the same logic level for that duration is the corresponding event generated to the `task_menu` task, avoiding mechanical bouncing:
 
 ```c
 case ST_BTN_XX_FALLING:
@@ -378,20 +427,20 @@ case ST_BTN_XX_FALLING:
     break;
 ```
 
-#### 3.2.2 Tarea de adquisición EMG
+#### 3.2.2 EMG Acquisition Task
 
-El ADC1 se configuró directamente por registros en `main.c`, en modo de conversión continua sobre dos canales (PA0 y PA1), con tiempo de muestreo de 239,5 ciclos:
+ADC1 was configured directly by registers in `main.c`, in continuous conversion mode on two channels (PA0 and PA1), with a sampling time of 239.5 cycles:
 
 ```c
 ADC1->CR1  = ADC_CR1_SCAN;
 ADC1->CR2  = ADC_CR2_CONT | ADC_CR2_EXTSEL | ADC_CR2_EXTTRIG;
-ADC1->SQR1 = (1 << 20);       /* 2 conversiones (L=1) */
+ADC1->SQR1 = (1 << 20);       /* 2 conversions (L=1) */
 ADC1->SQR3 = (0) | (1 << 5);  /* CH0 rank1, CH1 rank2 */
-ADC1->SMPR2 = (7) | (7 << 3); /* 239,5 ciclos CH0 y CH1 */
+ADC1->SMPR2 = (7) | (7 << 3); /* 239.5 cycles CH0 and CH1 */
 ADC1->CR2 |= ADC_CR2_ADON;
 ```
 
-Dentro del estado `ST_ACQUIRING`, la lectura se realiza verificando el flag `EOC`. Cada canal almacena sus muestras en un buffer circular de 8 posiciones de forma alternada:
+Inside the `ST_ACQUIRING` state, reading is performed by checking the `EOC` flag. Each channel stores its samples in an 8-position circular buffer in alternating fashion:
 
 ```c
 if (ADC1->SR & ADC_SR_EOC)
@@ -401,9 +450,9 @@ if (ADC1->SR & ADC_SR_EOC)
 }
 ```
 
-#### 3.2.3 Tarea de procesamiento y detección
+#### 3.2.3 Processing and Detection Task
 
-El nivel de activación se calcula como el **promedio simple** de las 8 muestras del buffer circular, actuando como filtro pasa-bajos que suaviza el ruido de la señal ADC:
+The activation level is calculated as the **simple average** of the 8 samples in the circular buffer, acting as a low-pass filter that smooths ADC signal noise:
 
 ```c
 uint32_t sum1 = 0, sum2 = 0;
@@ -412,7 +461,7 @@ emg1 = sum1 / 8;
 emg2 = sum2 / 8;
 ```
 
-La detección de contracción utiliza dos umbrales con histéresis. El músculo pasa a activo solo cuando supera el umbral alto, y vuelve a reposo solo cuando cae por debajo del umbral bajo:
+Contraction detection uses two thresholds with hysteresis. The muscle transitions to active only when it exceeds the high threshold, and returns to rest only when it falls below the low threshold:
 
 ```c
 if (!muscle1_active && emg1 > calib_threshold_high) muscle1_active = true;
@@ -421,7 +470,7 @@ if (!muscle2_active && emg2 > calib_threshold_high) muscle2_active = true;
 if ( muscle2_active && emg2 < calib_threshold_low)  muscle2_active = false;
 ```
 
-Los umbrales se calculan durante la calibración a partir del rango medido entre reposo y contracción máxima:
+Thresholds are calculated during calibration from the measured range between rest and maximum contraction:
 
 ```c
 uint32_t rango = (calib_emg_active > calib_emg_rest) ?
@@ -430,16 +479,16 @@ calib_threshold_high = calib_emg_rest + (rango * 75) / 100;
 calib_threshold_low  = calib_emg_rest + (rango * 25) / 100;
 ```
 
-Cuando se detecta contracción activa, el buzzer se activa mediante GPIO:
+When active contraction is detected, the buzzer is activated via GPIO:
 
 ```c
 #define BUZZER_ON()  HAL_GPIO_WritePin(BUZZER_PORT, BUZZER_PIN, GPIO_PIN_SET)
 #define BUZZER_OFF() HAL_GPIO_WritePin(BUZZER_PORT, BUZZER_PIN, GPIO_PIN_RESET)
 ```
 
-#### 3.2.4 Tarea de visualización LCD
+#### 3.2.4 LCD Visualization Task
 
-El display se actualiza cada 1000 ticks mostrando el valor promedio de cada canal y su estado de contracción en dos filas:
+The display is updated every 1000 ticks showing the average value of each channel and its contraction state on two rows:
 
 ```c
 snprintf(row1, sizeof(row1), "E1:%4lu %s", emg1, estado1);
@@ -447,11 +496,11 @@ snprintf(row2, sizeof(row2), "E2:%4lu %s", emg2, estado2);
 LCD_show(row1, row2);
 ```
 
-Donde `estado` puede ser `ACT`, `REL` o `---` según si el músculo está activo, relajado o sin calibración realizada.
+Where `state` can be `ACT`, `REL`, or `---` depending on whether the muscle is active, relaxed, or uncalibrated.
 
-#### 3.2.5 Tarea de transmisión UART
+#### 3.2.5 UART Transmission Task
 
-El nivel promedio y el estado de contracción de cada canal se serializan y envían por USART3 al módulo ESP32 cada 1000 ticks, en formato CSV:
+The average level and contraction state of each channel are serialized and sent via USART3 to the ESP32 module every 1000 ticks, in CSV format:
 
 ```c
 char uart_buf[32];
@@ -460,27 +509,27 @@ uint16_t len = snprintf(uart_buf, sizeof(uart_buf), "%lu,%lu,%s,%s\n",
 uart3_send(uart_buf, len);
 ```
 
-La función `uart3_send()` implementa el envío byte a byte verificando el flag `TXE` del registro de estado de USART3, con timeout para evitar bloqueos del sistema ante fallas de comunicación.
+The `uart3_send()` function implements byte-by-byte transmission by checking the `TXE` flag of the USART3 status register, with a timeout to prevent system lockups in case of communication failures.
 
 ---
 
-### 3.3 Firmware del módulo ESP32
+### 3.3 ESP32 Module Firmware
 
-El firmware del ESP32 fue desarrollado en el Arduino IDE y cumple dos funciones principales: recibir los datos del STM32 por UART y retransmitirlos en tiempo real a todos los clientes conectados mediante WebSocket sobre Wi-Fi.
+The ESP32 firmware was developed in the Arduino IDE and serves two main functions: receiving data from the STM32 via UART and retransmitting it in real time to all connected clients via WebSocket over Wi-Fi.
 
-Al iniciar, el ESP32 se conecta a la red Wi-Fi configurada y levanta un servidor WebSocket. Una vez conectado, queda disponible en una dirección IP local accesible desde cualquier dispositivo en la misma red.
+At startup, the ESP32 connects to the configured Wi-Fi network and starts a WebSocket server. Once connected, it becomes available at a local IP address accessible from any device on the same network.
 
-En el loop principal, el ESP32 lee los datos del STM32 carácter a carácter por UART hasta recibir el salto de línea `\n` que marca el fin de una trama CSV. Al completar la línea, la retransmite a todos los clientes WebSocket conectados:
+In the main loop, the ESP32 reads data from the STM32 character by character via UART until it receives the newline `\n` that marks the end of a CSV frame. Upon completing the line, it retransmits it to all connected WebSocket clients:
 
 ```cpp
 void loop() {
     webSocket.loop();
 
-    /* Leer UART del STM32 carácter a carácter */
+    /* Read UART from STM32 character by character */
     while (Serial2.available()) {
         char c = Serial2.read();
         if (c == '\n') {
-            /* Línea completa recibida — enviar a todos los clientes */
+            /* Complete line received — send to all clients */
             serial_buffer.trim();
             if (serial_buffer.length() > 0) {
                 webSocket.broadcastTXT(serial_buffer);
@@ -494,56 +543,52 @@ void loop() {
 }
 ```
 
-Cuando un cliente se conecta o desconecta, el evento es registrado por la función `webSocketEvent()`:
+When a client connects or disconnects, the event is logged by the `webSocketEvent()` function:
 
 ```cpp
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length) {
     if (type == WStype_CONNECTED)
-        Serial.printf("Cliente %u conectado\n", num);
+        Serial.printf("Client %u connected\n", num);
     else if (type == WStype_DISCONNECTED)
-        Serial.printf("Cliente %u desconectado\n", num);
+        Serial.printf("Client %u disconnected\n", num);
 }
 ```
 
-Los datos recibidos en la página web tienen el formato `emg1,emg2,ESTADO1,ESTADO2`, que el cliente JavaScript parsea para actualizar la visualización en tiempo real.
+The data received on the web page has the format `emg1,emg2,STATE1,STATE2`, which the JavaScript client parses to update the visualization in real time.
 
 ---
 
-## CAPÍTULO 4: Ensayos y resultados
+## CHAPTER 4: Testing and Results
 
-### 4.1 Pruebas funcionales del hardware
+### 4.1 Hardware Functional Tests
 
-Se verificó el correcto funcionamiento de cada módulo del sistema de forma individual antes de proceder con las pruebas de integración. La Figura 4.1 muestra el prototipo completo armado sobre protoboard, con todos los módulos conectados y el sistema en estado de espera inicial.
-
-<div align="center">
-<img width="433" alt="prototipo" src="https://github.com/user-attachments/assets/976b4efd-dc9d-4bfc-8ce1-8f114d0a2ec0" />
-</div>
-
-\*_Figura 4.1: Prototipo completo del sistema EMG. Se observan la NUCLEO-F103RB, el ESP32, el teclado, el LCD mostrando "EMG System Ready / Press ENTER/CALIB", los módulos AD8232 y los electrodos._
-
-</div>
-
-Las verificaciones realizadas sobre cada módulo fueron:
-
-- **LCD 16×2:** al encender el sistema se muestra el mensaje "EMG System Ready / Press ENTER/CALIB", confirmando la correcta inicialización del display y la comunicación en modo 4 bits.
-- **Teclado:** se verificó que cada botón genera el evento correcto hacia la tarea `task_menu` sin rebotes, gracias al debouncing implementado en `task_sensor`.
-- **AD8232:** se verificó la presencia de señal analógica en la salida de cada módulo mediante la lectura del ADC en el debugger del STM32CubeIDE.
-- **Buzzer:** se verificó su activación durante la secuencia de calibración y al superar el umbral de contracción.
-- **ESP32:** se verificó la recepción de datos por UART y su retransmisión por WebSocket, como se describe en la Sección 4.3.
-
-### 4.2 Pruebas funcionales del firmware
-
-La Figura 4.2 muestra una captura del entorno STM32CubeIDE durante una sesión de depuración. En el panel inferior izquierdo se observan los logs de inicialización de las tareas `task_sensor` y `task_menu`, y los registros de configuración de UART3. Esto confirma que el super-loop arranca correctamente y que todas las tareas se inicializan en el orden esperado.
+The correct operation of each system module was verified individually before proceeding with integration tests. Figure 4.1 shows the complete prototype assembled on a breadboard, with all modules connected and the system in the initial standby state.
 
 <div align="center">
-<img width="808" height="675" alt="captura-ide+arduino" src="https://github.com/user-attachments/assets/2d5945a9-ee63-4c0d-af43-ba07e2367d8a" />
+<img width="433" alt="prototype" src="https://github.com/user-attachments/assets/976b4efd-dc9d-4bfc-8ce1-8f114d0a2ec0" />
 </div>
 
-\*_Figura 4.2: Captura del STM32CubeIDE y Serial Monitor del Arduino IDE durante una sesión de monitoreo activo._
+_Figure 4.1: Complete prototype of the EMG system. The NUCLEO-F103RB, ESP32, keypad, LCD displaying "EMG System Ready / Press ENTER/CALIB", AD8232 modules, and electrodes are visible._
 
+The verifications performed on each module were:
+
+- **LCD 16×2:** upon powering on the system, "EMG System Ready / Press ENTER/CALIB" is displayed, confirming correct display initialization and 4-bit mode communication.
+- **Keypad:** each button was verified to generate the correct event to `task_menu` without bouncing, thanks to the debouncing implemented in `task_sensor`.
+- **AD8232:** the presence of analog signal at the output of each module was verified through ADC reading in the STM32CubeIDE debugger.
+- **Buzzer:** activation was verified during the calibration sequence and when exceeding the contraction threshold.
+- **ESP32:** data reception via UART and retransmission via WebSocket were verified, as described in Section 4.3.
+
+### 4.2 Firmware Functional Tests
+
+Figure 4.2 shows a capture of the STM32CubeIDE environment during a debugging session. In the lower-left panel, the initialization logs of `task_sensor` and `task_menu`, and the UART3 configuration records, can be observed. This confirms that the super-loop starts correctly and all tasks are initialized in the expected order.
+
+<div align="center">
+<img width="808" height="675" alt="ide-capture" src="https://github.com/user-attachments/assets/2d5945a9-ee63-4c0d-af43-ba07e2367d8a" />
 </div>
 
-En el Serial Monitor del Arduino IDE (panel inferior derecho de la misma captura) se observan los datos CSV transmitidos por el STM32 al ESP32 en tiempo real:
+_Figure 4.2: STM32CubeIDE and Arduino IDE Serial Monitor capture during an active monitoring session._
+
+In the Arduino IDE Serial Monitor (lower-right panel of the same capture), the CSV data transmitted by the STM32 to the ESP32 in real time can be observed:
 
 ```
 TX: 1752,24,---,---
@@ -556,375 +601,233 @@ TX: 1921,1201,REL,ACT
 TX: 2009,2025,ACT,ACT
 ```
 
-Esto confirma el correcto funcionamiento de la tarea de transmisión UART, la detección de contracción con histéresis y la transición de estados `---` (sin calibrar) → `REL` → `ACT` a medida que el sistema completa la calibración y comienza a detectar actividad muscular.
+This confirms the correct operation of the UART transmission task, hysteresis contraction detection, and the state transition from `---` (uncalibrated) → `REL` → `ACT` as the system completes calibration and begins detecting muscle activity.
 
-### 4.3 Pruebas de integración
+### 4.3 Integration Tests
 
-Se realizó una prueba de integración completa con el sistema armado, los electrodos colocados sobre el antebrazo y ambos canales activos. La secuencia ejecutada fue la siguiente:
+A complete integration test was performed with the system assembled, electrodes placed on the forearm, and both channels active. The executed sequence was:
 
-1. Al encender el sistema, el LCD muestra "EMG System Ready / Press ENTER/CALIB".
-2. El usuario presiona CALIB. El buzzer suena brevemente y el LCD solicita relajar el músculo durante 10 segundos.
-3. Transcurrido el tiempo de reposo, el buzzer vuelve a sonar y el LCD solicita contraer el músculo durante 10 segundos.
-4. Al finalizar, el buzzer confirma la calibración y el sistema pasa automáticamente al estado `ST_IDLE`.
-5. El usuario presiona ENTER para iniciar el monitoreo. El LCD comienza a mostrar los valores de `emg1` y `emg2` en tiempo real junto con el estado `ACT` o `REL`.
-6. Los datos se transmiten simultáneamente al ESP32, que los retransmite por WebSocket hacia la página web, donde son visibles desde cualquier dispositivo conectado a la misma red Wi-Fi.
+1. When powered on, the LCD displays "EMG System Ready / Press ENTER/CALIB".
+2. The user presses CALIB. The buzzer sounds briefly and the LCD prompts relaxing the muscle for 10 seconds.
+3. After the rest period, the buzzer sounds again and the LCD prompts contracting the muscle for 10 seconds.
+4. Upon completion, the buzzer confirms calibration and the system transitions automatically to `ST_IDLE`.
+5. The user presses ENTER to start monitoring. The LCD displays `emg1` and `emg2` values in real time with `ACT` or `REL` state.
+6. Data is simultaneously transmitted to the ESP32, which retransmits it via WebSocket to the web page, visible from any device connected to the same Wi-Fi network.
 
-La Figura 4.3 muestra la página web de monitoreo en tiempo real durante una sesión activa. Se observan los valores crudos del ADC para cada canal (EMG1 = 1950 en estado REL, EMG2 = 2060 en estado ACT), los gráficos de señal en tiempo real y la tasa de muestreo. Los valores de reposo alrededor de 2000 sobre un rango de 0–4095 son los esperados para el AD8232 alimentado a 3,3 V.
+Figure 4.3 shows the real-time monitoring web page during an active session. The raw ADC values for each channel (EMG1 = 1950 in REL state, EMG2 = 2060 in ACT state), the real-time signal graphs, and the sampling rate are displayed. Rest values around 2000 over a range of 0–4095 are the expected output for the AD8232 powered at 3.3 V.
 
 <div align="center">
-<img width="917" height="457" alt="monitor-live" src="https://github.com/user-attachments/assets/84d7e047-b59f-49cb-90c2-d057e97e424a" />
+<img width="917" height="457" alt="live-monitor" src="https://github.com/user-attachments/assets/84d7e047-b59f-49cb-90c2-d057e97e424a" />
+</div>
 
-\*_Figura 4.3: Página web "EMG Live Monitor" mostrando los dos canales en tiempo real. El pico ascendente en EMG 1 corresponde a una contracción muscular detectada correctamente. Los picos descendentes en ambos canales son artefactos de reconexión WebSocket, no de la señal EMG._
+_Figure 4.3: "EMG Live Monitor" web page showing both channels in real time. The ascending peak in EMG 1 corresponds to a correctly detected muscle contraction. The descending peaks in both channels are WebSocket reconnection artifacts, not EMG signal artifacts._
+
+The video below shows a complete demonstration of the system in operation, including the calibration sequence, monitoring start, and real-time contraction detection visualized on both the local LCD and the web page:
+
+[Watch demonstration video](https://youtu.be/LCJWbT8Dt3E)
+
+### 4.4 Energy Consumption Measurement and Analysis
+
+Consumption measurements were performed by powering the system from a regulated 5 V source, using a series multimeter to record the current consumed by the STM32 and its peripherals in each scenario. Each scenario was measured over several runs to obtain a representative value. The results are presented in Table 4.1.
+
+<div align="center">
+
+| Scenario                | Active Peripherals      | Test Description                                       | Consumption (mA) |
+| ----------------------- | ----------------------- | ------------------------------------------------------ | ---------------: |
+| **Baseline**            | None                    | Minimal loop, no enabled peripherals.                  |             12.9 |
+| **ADC active**          | ADC1                    | Continuous EMG signal conversion (AD8232).             |             14.1 |
+| **I2C active**          | I2C1 (OLED + EEPROM)    | Communication with OLED and EEPROM, screen refresh.    |             13.4 |
+| **UART active**         | USART3 (ESP32)          | Periodic transmission to the ESP32 module.             |             11.4 |
+| **Buzzer**              | GPIO                    | Buzzer activation upon threshold exceedance.           |             13.2 |
+| **Complete Super Loop** | ADC + LCD + UART + GPIO | Full system operation.                                 |             14.5 |
+
+_Table 4.1: Consumption measurement scenarios._
 
 </div>
 
-[Ver video](https://youtu.be/LCJWbT8Dt3E)
+All measured values are below the 20 mA limit established in NFR1, confirming compliance with the non-functional consumption requirement.
 
-### 4.4 Medición y análisis del consumo energético
+### 4.5 Execution Time Measurement and Analysis
 
-Las mediciones de consumo se realizaron alimentando el sistema desde una fuente regulada a 5 V, utilizando un multímetro en serie para registrar la corriente consumida por el STM32 y sus periféricos en cada escenario. Cada escenario se midió durante varias ejecuciones para obtener un valor representativo.
+Task execution times were measured by instrumenting the code with the STM32's internal timer. The results are presented in Table 4.2.
 
-| Escenario               | Periféricos activos     | Descripción de la prueba                              | Consumo (mA) |
-| ----------------------- | ----------------------- | ----------------------------------------------------- | -----------: |
-| **Baseline**            | Ninguno                 | Loop mínimo, sin periféricos habilitados.             |         12,9 |
-| **ADC activo**          | ADC1                    | Conversión continua de señal EMG (AD8232).            |         14,1 |
-| **I2C activo**          | I2C1 (OLED + EEPROM)    | Comunicación con OLED y EEPROM, refresco de pantalla. |         13,4 |
-| **UART activo**         | USART3 (ESP32)          | Transmisión periódica al módulo ESP32.                |         11,4 |
-| **Buzzer**              | GPIO                    | Activación del buzzer al superar el umbral.           |         13,2 |
-| **Super Loop completo** | ADC + LCD + UART + GPIO | Funcionamiento total del sistema.                     |         14,5 |
+<div align="center">
 
-_Tabla 4.1: Escenarios de medición de consumo._
+| Task                      | Description                          | Ci (ms) | Ti (ms) |  Ci/Ti |
+| ------------------------- | ------------------------------------ | ------: | ------: | -----: |
+| EMG Acquisition (ADC)     | Continuous two-channel sampling      |    0.02 |       1 | 0.0200 |
+| EMG Processing            | Window average and level             |    0.40 |      20 | 0.0200 |
+| LCD Display               | Screen refresh                       |    1.50 |     100 | 0.0150 |
+| UART Transmission (ESP32) | Sending the processed value          |    0.30 |      20 | 0.0150 |
+| Threshold Detection       | Hysteresis comparison and buzzer     |    0.05 |      20 | 0.0025 |
+| Button Reading            | Event management with debouncing     |    0.02 |      50 | 0.0004 |
 
-Todos los valores medidos se encuentran por debajo del límite de 20 mA establecido en RNF1, confirmando el cumplimiento del requisito no funcional de consumo.
+_Table 4.2: Periodic tasks considered for the load factor._
 
-### 4.5 Medición y análisis de tiempos de ejecución
+</div>
 
-Los tiempos de ejecución de cada tarea se midieron instrumentando el código con el temporizador interno del STM32.
+**Total system utilization factor:**
 
-| Tarea                    | Descripción                         | Ci (ms) | Ti (ms) |  Ci/Ti |
-| ------------------------ | ----------------------------------- | ------: | ------: | -----: |
-| Adquisición EMG (ADC)    | Muestreo continuo dos canales       |    0,02 |       1 | 0,0200 |
-| Procesamiento EMG        | Promedio de ventana y nivel         |    0,40 |      20 | 0,0200 |
-| Display LCD              | Refresco de pantalla                |    1,50 |     100 | 0,0150 |
-| Transmisión UART (ESP32) | Envío del valor procesado           |    0,30 |      20 | 0,0150 |
-| Detección de umbral      | Comparación con histéresis y buzzer |    0,05 |      20 | 0,0025 |
-| Lectura de botones       | Gestión de eventos con debouncing   |    0,02 |      50 | 0,0004 |
-
-_Tabla 4.2: Tareas periódicas consideradas para el factor de carga._
-
-**Factor de uso total del sistema:**
-
-En base a los tiempos de ejecución y períodos definidos en la Tabla 4.2, el factor de uso total se calcula como la suma de Ci/Ti de todas las tareas periódicas:
+Based on the execution times and periods defined in Table 4.2, the total utilization factor is calculated as the sum of Ci/Ti for all periodic tasks:
 
 ```
-u = 0,020 + 0,020 + 0,015 + 0,015 + 0,0025 + 0,0004 = 0,0729 → 7,29%
+u = 0.020 + 0.020 + 0.015 + 0.015 + 0.0025 + 0.0004 = 0.0729 → 7.29%
 ```
 
-El factor de carga de 7,29% indica que el microcontrolador opera muy por debajo de su capacidad máxima, lo que garantiza margen suficiente para incorporar tareas adicionales en futuras versiones.
+The 7.29% load factor indicates the microcontroller operates well below its maximum capacity, guaranteeing sufficient margin to incorporate additional tasks in future versions.
 
-### 4.6 Cumplimiento de requisitos
+### 4.6 Requirements Compliance
 
-| Estado | Descripción                 |
-| :----: | --------------------------- |
-|   🟢   | Implementado                |
-|   🟡   | En proceso de implementarse |
-|   🔴   | No será implementado        |
+<div align="center">
 
-_Tabla 4.3: Descripción de íconos de estado._
+| Status | Description              |
+| :----: | ------------------------ |
+|   🟢   | Implemented              |
+|   🟡   | Being implemented        |
+|   🔴   | Will not be implemented  |
 
-#### Requisitos funcionales
+_Table 4.3: Status icon descriptions._
 
-| Código | Requisito Funcional                                                | Estado |
-| :----: | ------------------------------------------------------------------ | :----: |
-|  RF1   | Adquisición de señal EMG mediante AD8232                           |   🟢   |
-|  RF2   | Digitalización con ADC a ≥ 1 kHz                                   |   🟢   |
-|  RF3   | Procesamiento digital (promedio de ventana, umbral con histéresis) |   🟢   |
-|  RF4   | Visualización en display LCD                                       |   🟢   |
-|  RF5   | Transmisión de datos por UART al ESP32                             |   🟢   |
-|  RF6   | Activación de buzzer por umbral                                    |   🟢   |
-|  RF7   | Inicio/detención mediante botón                                    |   🟢   |
-|  RF8   | Rutina de calibración guiada                                       |   🟢   |
+</div>
 
-_Tabla 4.4: Grado de cumplimiento de requisitos funcionales._
+#### Functional Requirements
 
-#### Requisitos no funcionales
+<div align="center">
 
-| Código | Requisito No Funcional                          | Estado |
-| :----: | ----------------------------------------------- | :----: |
-|  RNF1  | Consumo menor a 20 mA en operación estándar     |   🟢   |
-|  RNF2  | Comunicación UART continua durante el monitoreo |   🟢   |
-|  RNF3  | Actualización del display cada 100 ms           |   🟢   |
-|  RNF4  | Latencia de detección menor a 50 ms             |   🟢   |
-|  RNF5  | Arquitectura super-loop                         |   🟢   |
+| Code  | Functional Requirement                                              | Status |
+| :---: | ------------------------------------------------------------------- | :----: |
+|  FR1  | EMG signal acquisition via AD8232                                   |   🟢   |
+|  FR2  | Digitization with ADC at ≥ 1 kHz                                    |   🟢   |
+|  FR3  | Digital processing (window average, threshold with hysteresis)      |   🟢   |
+|  FR4  | Visualization on LCD display                                        |   🟢   |
+|  FR5  | Data transmission via UART to ESP32                                 |   🟢   |
+|  FR6  | Buzzer activation by threshold                                      |   🟢   |
+|  FR7  | Start/stop via button                                               |   🟢   |
+|  FR8  | Guided calibration routine                                          |   🟢   |
 
-_Tabla 4.5: Grado de cumplimiento de requisitos no funcionales._
+_Table 4.4: Functional requirements compliance._
 
-### 4.7 Comparación con sistemas similares
+</div>
 
-| Característica         | MyoWare 2.0 + Arduino | OpenBCI Cyton | **Este trabajo** |
-| ---------------------- | :-------------------: | :-----------: | :--------------: |
-| Microcontrolador       |      ATmega328P       |     PIC32     |   STM32F103RB    |
-| Canales EMG            |           1           |       8       |        2         |
-| Conectividad           |      Serial USB       |  Wi-Fi / BLE  |   UART + ESP32   |
-| Display local          |          No           |      No       |     LCD 16×2     |
-| Calibración guiada     |          No           |      No       |        Sí        |
-| Procesamiento embebido |        Básico         |   Completo    |     Completo     |
-| Alerta por umbral      |          No           |      No       |   Sí (buzzer)    |
-| Costo aproximado       |        ~50 USD        |   ~1249 USD   |     ~40 USD      |
-| Código abierto         |          Sí           |      Sí       |        Sí        |
+#### Non-Functional Requirements
 
-_Tabla 4.6: Comparación con sistemas similares._
+<div align="center">
 
-El sistema desarrollado se destaca por integrar visualización local, calibración guiada, alerta por umbral y procesamiento embebido completo a un costo significativamente menor que las alternativas analizadas.
+| Code  | Non-Functional Requirement                           | Status |
+| :---: | ---------------------------------------------------- | :----: |
+| NFR1  | Consumption below 20 mA in standard operation        |   🟢   |
+| NFR2  | Continuous UART communication during monitoring      |   🟢   |
+| NFR3  | Display update every 100 ms                          |   🟢   |
+| NFR4  | Detection latency under 50 ms                        |   🟢   |
+| NFR5  | Super-loop architecture                              |   🟢   |
 
-### 4.8 Documentación del desarrollo realizado
+_Table 4.5: Non-functional requirements compliance._
 
-| Elemento                            | Referencia  |
-| ----------------------------------- | :---------: |
-| Motivación del trabajo              | Sección 1.2 |
-| Funcionamiento del EMG              | Sección 1.3 |
-| Análisis de sistemas similares      | Sección 1.4 |
-| Requisitos                          | Sección 2.1 |
-| Casos de uso                        | Sección 2.2 |
-| Diagrama en bloques                 | Figura 3.1  |
-| Lista de materiales                 |  Tabla 3.1  |
-| Arquitectura del firmware           | Sección 3.2 |
-| Mediciones de consumo               | Sección 4.4 |
-| Análisis de tiempos                 | Sección 4.5 |
-| Grado de cumplimiento de requisitos | Sección 4.6 |
-| Comparación con sistemas similares  | Sección 4.7 |
+</div>
 
-_Tabla 4.7: Elementos que resumen la información más importante del trabajo._
+### 4.7 Comparison with Similar Systems
+
+The developed system stands out for integrating local visualization, guided calibration, threshold alert, and complete embedded processing at a significantly lower cost than the analyzed alternatives. Table 4.6 summarizes the comparison between the proposed system and the reference solutions presented in Section 1.4.
+
+<div align="center">
+
+| Feature                | MyoWare 2.0 + Arduino | OpenBCI Cyton | **This work** |
+| ---------------------- | :-------------------: | :-----------: | :-----------: |
+| Microcontroller        |      ATmega328P       |     PIC32     |  STM32F103RB  |
+| EMG Channels           |           1           |       8       |       2       |
+| Connectivity           |      USB Serial       |  Wi-Fi / BLE  | UART + ESP32  |
+| Local Display          |          No           |      No       |   LCD 16×2    |
+| Guided Calibration     |          No           |      No       |      Yes      |
+| Embedded Processing    |        Basic          |   Complete    |   Complete    |
+| Threshold Alert        |          No           |      No       | Yes (buzzer)  |
+| Approximate Cost       |       ~$50 USD        |  ~$1249 USD   |   ~$40 USD    |
+| Open Source            |          Yes          |      Yes      |      Yes      |
+
+_Table 4.6: Comparison with similar systems._
+
+</div>
+
+### 4.8 Development Documentation
+
+<div align="center">
+
+| Element                         | Reference   |
+| ------------------------------- | :---------: |
+| Work motivation                 | Section 1.2 |
+| EMG operation                   | Section 1.3 |
+| Analysis of similar systems     | Section 1.4 |
+| Requirements                    | Section 2.1 |
+| Use cases                       | Section 2.2 |
+| Block diagram                   | Figure 3.1  |
+| Bill of materials               | Table 3.1   |
+| Firmware architecture           | Section 3.2 |
+| Consumption measurements        | Section 4.4 |
+| Timing analysis                 | Section 4.5 |
+| Requirements compliance         | Section 4.6 |
+| Comparison with similar systems | Section 4.7 |
+
+_Table 4.7: Elements summarizing the most important information of the work._
+
+</div>
 
 ---
 
-## CAPÍTULO 5: Conclusiones
+## CHAPTER 5: Conclusions
 
-### 5.1 Resultados obtenidos
+### 5.1 Results Obtained
 
-Los principales aportes del trabajo realizado son los siguientes:
+The main contributions of this work are:
 
-- Se diseñó e implementó un sistema embebido completo para adquisición y procesamiento de señales EMG de dos canales, integrando múltiples periféricos sobre una arquitectura super-loop bare-metal.
-- Se implementó una rutina de calibración guiada que permite adaptar los umbrales de detección a las características musculares de cada usuario.
-- Se validó el consumo energético del sistema completo (14,5 mA en operación), cumpliendo el requisito de menos de 20 mA.
-- Se calculó y verificó el factor de carga de CPU (7,29%), que garantiza estabilidad temporal y margen para futuras expansiones.
-- Se diseñó la arquitectura de firmware con una máquina de estados clara, tareas periódicas bien definidas y tiempos de ejecución que aseguran una latencia de detección menor a 50 ms.
-- Se adquirió experiencia en la configuración del ADC por registros, el manejo del display LCD en modo 4 bits, la comunicación UART con módulos externos y la implementación de lógica de histéresis para detección de eventos en señales ruidosas.
+- A complete embedded system for two-channel EMG signal acquisition and processing was designed and implemented, integrating multiple peripherals on a bare-metal super-loop architecture.
+- A guided calibration routine was implemented that allows detection thresholds to be adapted to the muscular characteristics of each user.
+- The energy consumption of the complete system (14.5 mA in operation) was validated, meeting the requirement of less than 20 mA.
+- The CPU load factor (7.29%) was calculated and verified, guaranteeing temporal stability and room for future expansions.
+- The firmware architecture was designed with a clear state machine, well-defined periodic tasks, and execution times that ensure a detection latency of less than 50 ms.
+- Experience was gained in register-level ADC configuration, 4-bit LCD display management, UART communication with external modules, and implementation of hysteresis logic for event detection in noisy signals.
 
-### 5.2 Próximos pasos
+### 5.2 Next Steps
 
-Como continuación de este trabajo se propone:
+As a continuation of this work, the following is proposed:
 
-- Desarrollar una aplicación en el ESP32 para visualización en tiempo real de la señal EMG vía Wi-Fi o Bluetooth.
-- Incorporar almacenamiento de sesiones de monitoreo en memoria Flash interna para análisis posterior.
-- Explorar la detección de gestos específicos mediante clasificación de patrones EMG, lo que permitiría utilizar el sistema como interfaz de control para dispositivos externos.
-- Implementar un modo de bajo consumo entre adquisiciones para extender la vida útil en aplicaciones alimentadas por batería.
-- Diseñar un PCB propio que reemplace la placa de desarrollo y reduzca el tamaño final del dispositivo.
+- Develop an application on the ESP32 for real-time visualization of the EMG signal via Wi-Fi or Bluetooth.
+- Incorporate monitoring session storage in internal Flash memory for subsequent analysis.
+- Explore the detection of specific gestures through EMG pattern classification, which would allow the system to be used as a control interface for external devices.
+- Implement a low-power mode between acquisitions to extend battery life in battery-powered applications.
+- Design a custom PCB to replace the development board and reduce the final device size.
 
 ---
 
-## Bibliografía
+## Bibliography
 
-[1] Analog Devices, _AD8232 Single-Lead, Heart Rate Monitor Front End_ [Online]. Disponible en:  
+[1] Analog Devices, _AD8232 Single-Lead, Heart Rate Monitor Front End_ [Online]. Available at:  
 https://www.analog.com/en/products/ad8232.html
 
-[2] STMicroelectronics, _NUCLEO-F103RB Product Page_ [Online]. Disponible en:  
+[2] STMicroelectronics, _NUCLEO-F103RB Product Page_ [Online]. Available at:  
 https://www.st.com/en/evaluation-tools/nucleo-f103rb.html
 
-[3] MB1136 - Electrical Schematic - STM32 Nucleo-64 boards. [Online]. Disponible en:  
+[3] MB1136 - Electrical Schematic - STM32 Nucleo-64 boards. [Online]. Available at:  
 https://www.st.com/resource/en/schematic_pack/mb1136-default-c04_schematic.pdf
 
-[4] Espressif Systems, _ESP32 Technical Reference Manual_ [Online]. Disponible en:  
+[4] Espressif Systems, _ESP32 Technical Reference Manual_ [Online]. Available at:  
 https://www.espressif.com/en/products/socs/esp32
 
-[5] IEEE (2016). _IEEE Citation Reference_ [Online]. Disponible en:  
+[5] IEEE (2016). _IEEE Citation Reference_ [Online]. Available at:  
 http://www.ieee.org/documents/ieeecitationref.pdf
 
-[6] De Luca, C. J., _The use of surface electromyography in biomechanics_, Journal of Applied Biomechanics, vol. 13, no. 2, pp. 135–163, 1997. Disponible en:  
+[6] De Luca, C. J., _The use of surface electromyography in biomechanics_, Journal of Applied Biomechanics, vol. 13, no. 2, pp. 135–163, 1997. Available at:  
 https://www.bu.edu/nmrc/files/2010/04/078.pdf
 
-[7] Librería ESP32 BLE Arduino. [Online]. Disponible en:  
+[7] ESP32 BLE Arduino Library. [Online]. Available at:  
 https://docs.arduino.cc/libraries/esp32-ble-arduino
 
-_Referencias internas del repositorio:_
+_Internal repository references:_
 
-| Archivo                              | Descripción                                            |
-| ------------------------------------ | ------------------------------------------------------ |
-| `tdse-tp3_04-interactive_menu-main/` | Proyecto STM32CubeIDE (firmware del microcontrolador)  |
-| `esp32_emg_wifi.ino`                 | Firmware del módulo ESP32 (recepción UART + WebSocket) |
-| `emg_dashboard.html`                 | Página web de visualización en tiempo real             |
-=======
-# EMG Interface for Muscle Activity Monitoring
+<div align="center">
 
-### Author: **Luciana Falcon**  
+| File                                 | Description                                              |
+| ------------------------------------ | -------------------------------------------------------- |
+| `tdse-tp3_04-interactive_menu-main/` | STM32CubeIDE project (microcontroller firmware)          |
+| `esp32_emg_wifi.ino`                 | ESP32 module firmware (UART reception + WebSocket)       |
+| `emg_dashboard.html`                 | Real-time visualization web page                         |
 
----
-
-## Description  
-
-The project consists of the development of an **embedded system capable of acquiring, processing, and visualizing bioelectrical muscle signals (EMG)** using **non-invasive recording electrodes**.  
-
-The system enables the **detection of muscle contractions** through digital processing implemented in the **STM32 microcontroller**, displaying the results on a **local display** and transmitting the data via **Bluetooth** to a PC or mobile device for analysis or visualization.  
-
-The main objective is **to design a complete embedded system** that integrates all stages of biological signal processing:
-- **Analog sensing** (electrodes + amplifier).  
-- **Signal conditioning and digitization** (microcontroller ADC).  
-- **Processing and event detection** (embedded software).  
-- **Communication and visualization** (Bluetooth + display).  
-
----
-
-## Project Scope  
-
-- Acquisition of EMG signals using non-invasive electrodes and amplification through the AD8232 module.  
-- Detection of muscle contractions through digital processing and threshold detection.  
-- Real-time visualization of muscle activation level on an OLED display.  
-- Transmission of data via Bluetooth to a PC or mobile device.  
-- Activation of an LED or audible alert when the contraction threshold is exceeded.  
-
----
-
-## Requirements  
-
-### Development Platform  
-- **Board used:** NUCLEO-F103RB  
-- **Microcontroller:** STM32  
-
-### Firmware  
-Implementation using a **Super Loop (bare-metal, event-triggered)** architecture with periodic tasks:
-- ADC / I2C reading.  
-- Digital processing and peak detection.  
-- UART–BLE (Bluetooth) communication.  
-- OLED display update.  
-
----
-
-### Hardware  
-
-- **Dip Switch / Button:** Allows starting or stopping EMG signal acquisition.  
-- **Buzzer:** Emits an audible signal when the contraction threshold is exceeded.  
-- **OLED Display (I2C):** Displays the contraction level in real time.  
-- **Bluetooth Module HM-10:** Transmits EMG data to a PC or mobile device.  
-- **External EEPROM / Internal Flash Memory:** Stores historical data or calibration parameters.  
-- **Analog sensor (AD8232 + electrodes):** Captures EMG signals in the millivolt range and feeds them to the STM32 ADC.  
-
----
-
-## Block Diagram  
-
-![embebidos](https://github.com/user-attachments/assets/35658773-ff54-48d2-b060-35d2d7419d01)
-
----
-
-## Power Consumption and Load Factor
-
-Table 1.1 presents the system power consumption analysis under different operating scenarios. Measurements were performed by powering the node from a regulated 5 V supply,
-using a multimeter in series to record the current consumed by the STM32 and its peripherals in each case. Each scenario was measured during multiple executions to obtain a representative value.
-
-| Scenario               | Active Peripherals                     | Test Description                                                                      | Consumption (mA) |
-|------------------------|------------------------------------------|--------------------------------------------------------------------------------------|------------------|
-| **Baseline**           | None                                     | Microcontroller running minimal loop, with no peripherals enabled.                  |    12.9          |
-| **ADC active**         | ADC1                                     | Continuous conversion of EMG signal from the AD8232 module.                         |    14.1          |
-| **I2C active**         | I2C1 (OLED + EEPROM)                     | Communication with OLED and I2C memory access, screen refresh.                      |    13.4          |
-| **UART active**        | USART1 (BLE HM-10)                       | Periodic transmission of contraction level to the HM-10 Bluetooth module.           |    11.4          |
-| **Buzzer**             | GPIO                                     | Buzzer activation when contraction level exceeds the configured threshold.          |    13.2          |
-| **Full Super Loop**    | ADC + I2C + UART + GPIO                  | Full operation: EMG acquisition, processing, BLE transmission and OLED active.     |    14.5          |
-
-<p align="center"><b>Table 1.1 — Power consumption measurement scenarios.</b></p>
-
-Table 1.2 lists the periodic tasks present in the super-loop. Their execution times were estimated using instrumented measurements with the internal STM32 timer,
-along with their corresponding periods.
-
-| Task                         | Description                                | CPU Time (Ci) | Period (Ti) | Ci/Ti   |
-|------------------------------|--------------------------------------------|---------------|-------------|---------|
-| **EMG Acquisition (ADC)**    | Continuous sampling at 1 kHz               | 0.02 ms       | 1 ms        | 0.020   |
-| **EMG Processing**           | Filtering, RMS and level calculation       | 0.40 ms       | 20 ms       | 0.020   |
-| **OLED Display (I2C)**       | Screen refresh                             | 1.50 ms       | 100 ms      | 0.015   |
-| **Bluetooth BLE (UART)**     | Transmission of processed value            | 0.30 ms       | 20 ms       | 0.015   |
-| **Threshold Detection**      | Comparison and buzzer activation           | 0.05 ms       | 20 ms       | 0.0025  |
-| **Button Reading**           | Periodic digital input reading             | 0.02 ms       | 50 ms       | 0.0004  |
-
-<p align="center"><b>Table 1.2 — Periodic tasks considered for load factor calculation.</b></p>
-
-**Total system utilization factor:**  
-Based on the execution times and periods defined in Table 1.2, the total system utilization factor is calculated as the sum of Ci/Ti for all periodic tasks.
-
-u = 0.020 + 0.020 + 0.015 + 0.015 + 0.0025 + 0.0004 = **0.0729 → 7.29%**
-
----
-
-## Requirements Elicitation and Use Cases
-
-Table 2.1 summarizes the essential functions that the system must perform to meet the project objectives.
-Each requirement is assigned a unique identifier to ensure traceability during design and implementation.
-
-| Code | Functional Requirement |
-|------|------------------------|
-| **FR1** | The system must acquire the EMG signal using electrodes connected to the AD8232 module. |
-| **FR2** | The system must digitize the signal using the STM32 ADC at at least 1 kHz. |
-| **FR3** | The system must process the signal (RMS, filtering, threshold). |
-| **FR4** | The system must display the muscle activity level on the OLED screen. |
-| **FR5** | The system must transmit the processed data via Bluetooth to a PC or mobile device. |
-| **FR6** | The system must activate a buzzer when muscle activity exceeds a configurable threshold. |
-| **FR7** | The system must allow starting/stopping monitoring using a button. |
-
-<p align="center"><b>Table 2.1 — Functional Requirements FR.</b></p>
-
-Table 2.2 presents performance constraints and operating conditions that the system must satisfy to guarantee efficiency,
-proper timing response and communication stability.
-
-| Code | Non-Functional Requirement |
-|------|----------------------------|
-| **NFR1** | The system must maintain consumption below 20 mA under standard operation. |
-| **NFR2** | The Bluetooth interface must ensure continuous communication. |
-| **NFR3** | The display must update at least every 100 ms. |
-| **NFR4** | Contraction detection must occur with latency below 50 ms. |
-| **NFR5** | The firmware must be implemented using a super-loop architecture. |
-
-<p align="center"><b>Table 2.2 — Non-Functional Requirements NFR.</b></p>
-
-Tables 3.1 to 4.2 present the two use cases of the system.
-
-| Item | Description |
-|------|-------------|
-| **Actors** | User, EMG System. |
-| **Preconditions** | The device is powered on and electrodes are properly placed. |
-
-<p align="center"><b>Table 3.1 — Use Case 1: Muscle Activity Monitoring.</b></p>
-
-| Step | Action |
-|------|--------|
-| **1** | The user presses the button to start monitoring. |
-| **2** | The system begins sampling the EMG signal. |
-| **3** | The signal is processed and the muscle activation level is calculated. |
-| **4** | The processed value is sent to the display and via Bluetooth. |
-| **5** | If the level exceeds the threshold, the buzzer is activated. |
-
-<p align="center"><b>Table 3.2 — Main Flow.</b></p>
-
-| Step | Action |
-|------|--------|
-| **A1** | The user presses the button again and the system stops acquisition. |
-
-<p align="center"><b>Table 3.3 — Alternative Flow.</b></p>
-
-| Item | Description |
-|------|-------------|
-| **Actor** | EMG System. |
-| **Preconditions** | The system is operating and the EMG signal is being acquired. |
-| **Postconditions** | The buzzer is activated or deactivated according to the muscle activation level. |
-| **General Description** | The system continuously analyzes the RMS level of the EMG signal and generates an alarm when a defined threshold is exceeded. |
-
-<p align="center"><b>Table 4.1 — Use Case 2: Activation Threshold Alarm.</b></p>
-
-| Step | Action |
-|------|--------|
-| **1** | The system calculates the RMS of the EMG signal in each processing window. |
-| **2** | It compares the level with the configured threshold. |
-| **3** | If exceeded, it activates the buzzer. |
-| **4** | When the RMS value drops below the threshold, the system deactivates the buzzer. |
-
-<p align="center"><b>Table 4.2 — Flow.</b></p>
-
----
->>>>>>> 2e30eef5ca84b94e71e43a2cf83631d6bcad1706
+</div>
