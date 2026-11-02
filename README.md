@@ -38,7 +38,9 @@ Figure: Block diagram of the EMG interface system.
 
 ## Demo 
 
-https://github.com/user-attachments/assets/9ebdba51-be74-413d-a18b-05fae449b5c6
+<div align="center">
+  <video src="https://github.com/user-attachments/assets/9ebdba51-be74-413d-a18b-05fae449b5c6" width="400" controls></video>
+</div>
 
 
 ## Live Web Monitoring
